@@ -1,15 +1,7 @@
 import { useSettings } from "@/context/settingsController";
-import { useWishes } from "@/context/WishContext";
+import { useState } from "react";
 import {
-  connectWithPairingCode,
-  generatePairingCode,
-  getPartnerId,
-} from "@/services/partnerService";
-import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
   Alert,
-  Keyboard,
   ScrollView,
   Switch,
   Text,
@@ -20,59 +12,17 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SettingsScreen() {
-  const { girlMode, setGirlMode, theme, setTheme } = useSettings();
-
-  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
-  const [inputCode, setInputCode] = useState<string>("");
-  const [partnerId, setPartnerId] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-
-  const { refreshPartner } = useWishes();
-
-  useEffect(() => {
-    checkPartnerStatus();
-  }, []);
-
-  const checkPartnerStatus = async () => {
-    const pId = await getPartnerId();
-    setPartnerId(pId);
-  };
-
-  const handleGenerateCode = async () => {
-    try {
-      setLoading(true);
-      const code = await generatePairingCode();
-      setGeneratedCode(code);
-    } catch (error) {
-      Alert.alert("Error", "Failed to generate pairing code.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleConnect = async () => {
-    if (!inputCode.trim() || inputCode.length < 6) {
-      Alert.alert("Error", "Please enter a valid 6-digit pairing code!");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      await connectWithPairingCode(inputCode.trim());
-      await refreshPartner();
-      await checkPartnerStatus();
-
-      setInputCode("");
-      Keyboard.dismiss();
-      Alert.alert("Success! 🎉", "Successfully connected with your partner!");
-    } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to connect with partner.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  const { theme, setTheme } = useSettings();
   const isDarkMode = theme?.toLowerCase() === "dark";
+
+  // Szerver kapcsolódási adatok
+  const [serverUrl, setServerUrl] = useState("https://homeserver.local");
+  const [apiKey, setApiKey] = useState("••••••••••••••••");
+  const [refreshInterval, setRefreshInterval] = useState("2");
+
+  const handleSaveSettings = () => {
+    Alert.alert("Success", "Server settings saved successfully!");
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-slate-100 dark:bg-slate-900">
@@ -85,19 +35,12 @@ export default function SettingsScreen() {
           Settings
         </Text>
 
-        <View className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm mb-4 border border-transparent dark:border-slate-700">
-          <View className="flex-row justify-between items-center py-2 border-b border-slate-100 dark:border-slate-700">
-            <Text className="text-base text-slate-700 dark:text-slate-200 font-medium">
-              Girl mode
-            </Text>
-            <Switch
-              value={girlMode}
-              onValueChange={setGirlMode}
-              trackColor={{ false: "#7dd3fc", true: "#ff6cc7" }}
-              thumbColor={"#ffffff"}
-            />
-          </View>
-          <View className="flex-row justify-between items-center py-2 border-b border-slate-100 dark:border-slate-700">
+        {/* 1. App Téma Beállítások */}
+        <View className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm mb-4 border border-slate-200 dark:border-slate-700">
+          <Text className="text-xs font-bold text-slate-400 uppercase mb-2">
+            Appearance
+          </Text>
+          <View className="flex-row justify-between items-center py-2">
             <Text className="text-base text-slate-700 dark:text-slate-200 font-medium">
               Dark Mode
             </Text>
@@ -110,102 +53,65 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        <View className="bg-white dark:bg-slate-800 p-4 rounded-2xl mb-4 shadow-sm border border-transparent dark:border-slate-700">
-          <Text className="text-base font-bold text-slate-700 dark:text-slate-200 mb-2">
-            Partner connection status
-          </Text>
-          {partnerId ? (
-            <View className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 p-3 rounded-xl flex-row items-center gap-2">
-              <Text className="text-emerald-600 dark:text-emerald-400 font-bold text-sm">
-                Connected with your partner! ❤️
-              </Text>
-            </View>
-          ) : (
-            <Text className="text-slate-400 dark:text-slate-500 text-xs">
-              Not connected yet.
-            </Text>
-          )}
-        </View>
-
-        <View className="bg-white dark:bg-slate-800 p-4 rounded-2xl mb-4 shadow-sm border border-transparent dark:border-slate-700">
-          <Text className="text-base font-bold text-slate-700 dark:text-slate-200 mb-1">
-            Your pairing code
-          </Text>
-          <Text className="text-xs text-slate-400 dark:text-slate-400 mb-3">
-            Generate a code for your partner to connect!
+        {/* 2. Szerver Kapcsolat */}
+        <View className="bg-white dark:bg-slate-800 p-4 rounded-2xl mb-4 shadow-sm border border-slate-200 dark:border-slate-700">
+          <Text className="text-xs font-bold text-slate-400 uppercase mb-3">
+            Server Connection
           </Text>
 
-          {generatedCode ? (
-            <View className="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl items-center mb-3 border border-slate-200 dark:border-slate-700">
-              <Text className="text-xs text-slate-400 dark:text-slate-500 mb-0.5">
-                Your code:
-              </Text>
-              <Text className="text-2xl font-extrabold tracking-widest text-slate-800 dark:text-white">
-                {generatedCode}
-              </Text>
-            </View>
-          ) : null}
-
-          <TouchableOpacity
-            onPress={handleGenerateCode}
-            disabled={loading}
-            className="bg-slate-800 dark:bg-sky-600 p-3 rounded-xl items-center justify-center flex-row"
-          >
-            {loading ? (
-              <ActivityIndicator color="#ffffff" size="small" />
-            ) : (
-              <Text className="text-white font-bold text-sm">
-                Generate code ✨
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        <View className="bg-white dark:bg-slate-800 p-4 mb-4 rounded-2xl shadow-sm border border-transparent dark:border-slate-700">
-          <Text className="text-base font-bold text-slate-700 dark:text-slate-200 mb-1">
-            Partner's code
+          <Text className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+            Server URL / IP Address
           </Text>
-          <Text className="text-xs text-slate-400 dark:text-slate-400 mb-3">
-            Enter your partner's 6-digit code to connect!
-          </Text>
-
           <TextInput
-            className="border border-slate-200 dark:border-slate-700 p-2.5 rounded-xl mb-3 text-base bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white text-center font-bold tracking-widest"
-            placeholder="000000"
+            className="border border-slate-200 dark:border-slate-700 p-3 rounded-xl mb-3 text-sm bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white"
+            placeholder="https://192.168.1.100:8080"
+            placeholderTextColor="#94a3b8"
+            value={serverUrl}
+            onChangeText={setServerUrl}
+            autoCapitalize="none"
+          />
+
+          <Text className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+            API Token
+          </Text>
+          <TextInput
+            className="border border-slate-200 dark:border-slate-700 p-3 rounded-xl mb-3 text-sm bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white"
+            placeholder="Enter API Key"
+            placeholderTextColor="#94a3b8"
+            secureTextEntry
+            value={apiKey}
+            onChangeText={setApiKey}
+          />
+
+          <Text className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+            Auto Refresh Interval (seconds)
+          </Text>
+          <TextInput
+            className="border border-slate-200 dark:border-slate-700 p-3 rounded-xl mb-4 text-sm bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white"
+            placeholder="2"
             placeholderTextColor="#94a3b8"
             keyboardType="number-pad"
-            maxLength={6}
-            value={inputCode}
-            onChangeText={setInputCode}
+            value={refreshInterval}
+            onChangeText={setRefreshInterval}
           />
 
           <TouchableOpacity
-            onPress={handleConnect}
-            disabled={loading || inputCode.length < 6}
-            style={{
-              backgroundColor:
-                inputCode.length === 6
-                  ? "#10b981"
-                  : isDarkMode
-                    ? "#334155"
-                    : "#cbd5e1",
-            }}
-            className="p-3 rounded-xl items-center justify-center flex-row"
+            onPress={handleSaveSettings}
+            className="bg-blue-600 p-3.5 rounded-xl items-center"
           >
-            {loading ? (
-              <ActivityIndicator color="#ffffff" size="small" />
-            ) : (
-              <Text className="text-white font-bold text-sm">Connect 🔗</Text>
-            )}
+            <Text className="text-white font-bold text-sm">
+              Save Server Config
+            </Text>
           </TouchableOpacity>
         </View>
 
-        <View className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-transparent dark:border-slate-700">
+        {/* 3. Credits / App Info */}
+        <View className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
           <Text className="text-base font-bold text-slate-700 dark:text-slate-200 mb-1">
-            Credits
+            HomeServer Dashboard
           </Text>
-          <Text className="text-sm text-slate-400 dark:text-slate-400 mb-3">
-            Made by Máté Auer ©️ MateDevs
+          <Text className="text-xs text-slate-400 dark:text-slate-400">
+            Version 1.0.0 — Developed by Máté Auer ©️ MateDevs
           </Text>
         </View>
       </ScrollView>

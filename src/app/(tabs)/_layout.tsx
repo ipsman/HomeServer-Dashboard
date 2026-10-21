@@ -1,5 +1,5 @@
 import { useSettings } from "@/context/settingsController";
-import { Ionicons } from "@expo/vector-icons";
+import { AntDesign, Feather, Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 
 export default function TabLayout() {
@@ -29,27 +29,36 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Wishes",
+          title: "Overview",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="add-outline" size={size} color={color} />
+            <AntDesign name="dashboard" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="myWishListScreen"
+        name="storage"
         options={{
-          title: "My Wishlist",
+          title: "Storage",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="list-outline" size={size} color={color} />
+            <AntDesign name="database" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="partnerWishList"
+        name="components"
         options={{
-          title: tabTitle,
+          title: "Components",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="heart-outline" size={size} color={color} />
+            <Feather name="cpu" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="services"
+        options={{
+          title: "Services",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="apps" size={size} color={color} />
           ),
         }}
       />
