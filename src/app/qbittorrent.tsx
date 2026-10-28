@@ -12,7 +12,7 @@ interface TorrentItem {
   id: string;
   name: string;
   size: string;
-  progress: number; // 0 - 100
+  progress: number;
   downloadSpeed: string;
   uploadSpeed: string;
   status: "downloading" | "paused" | "completed";
@@ -22,7 +22,6 @@ interface TorrentItem {
 export default function QBittorrentScreen() {
   const { theme } = useSettings();
 
-  // Mock adatok a qBittorrent API-ból
   const [torrents, setTorrents] = useState<TorrentItem[]>([
     {
       id: "1",
@@ -76,7 +75,6 @@ export default function QBittorrentScreen() {
           qBittorrent Manager
         </Text>
 
-        {/* Összesített sebesség kártya */}
         <View className="bg-white dark:bg-slate-800 p-4 rounded-2xl mb-4 border border-slate-200 dark:border-slate-700 shadow-sm flex-row justify-between">
           <View>
             <Text className="text-xs font-bold text-slate-400 uppercase">
@@ -94,7 +92,6 @@ export default function QBittorrentScreen() {
           </View>
         </View>
 
-        {/* Torrentek Listája */}
         <FlatList
           data={torrents}
           keyExtractor={(item) => item.id}
@@ -137,7 +134,6 @@ export default function QBittorrentScreen() {
                 />
               </View>
 
-              {/* Részletek: Méret, Sebesség, ETA */}
               <View className="flex-row justify-between items-center mt-2">
                 <Text className="text-xs text-slate-500 dark:text-slate-400">
                   {item.size} • {item.progress}%
@@ -152,7 +148,6 @@ export default function QBittorrentScreen() {
                 <Text className="text-xs text-slate-400">ETA: {item.eta}</Text>
               </View>
 
-              {/* Vezérlő gombok */}
               <View className="flex-row gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/60">
                 <TouchableOpacity
                   onPress={() => toggleTorrentStatus(item.id)}

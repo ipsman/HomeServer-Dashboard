@@ -15,7 +15,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.matedevs.expensepro"
+      "package": "com.matedevs.expensepro",
+      "usesCleartextTraffic": true
     },
     "web": {
       "output": "static",

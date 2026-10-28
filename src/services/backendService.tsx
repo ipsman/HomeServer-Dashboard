@@ -1,19 +1,19 @@
-const API_BASE_URL = '//192.168.0.115:8080/api'; // Android emulátorhoz (vagy a géped IP-címére)
+const API_BASE_URL = "http://172.24.25.190:8080/api"; // Android emulátorhoz (vagy a géped IP-címére)
 
 // Definiáljuk, hogy milyen adatok jönnek a system végponttól (igazítsd a saját Backend DTO-d mezőihez!)
 export interface SystemStats {
   cpuUsage?: number;
   freeMemory?: number;
   totalMemory?: number;
-  // ide jöhetnek a többi OSHI-s adatok, amiket a backend küld
-  [key: string]: any; 
+
+  [key: string]: any;
 }
 
 export const BackendService = {
   // --- DOCKER ---
   async getContainers(): Promise<string[]> {
     const response = await fetch(`${API_BASE_URL}/docker/containers`);
-    if (!response.ok) throw new Error('Nem sikerült lekérni a konténereket');
+    if (!response.ok) throw new Error("Nem sikerült lekérni a konténereket");
     return await response.json();
   },
 
@@ -27,7 +27,7 @@ export const BackendService = {
       }
       return await response.json();
     } catch (error) {
-      console.error('Nem sikerült lekérni a rendszermutatókat:', error);
+      console.error("Nem sikerült lekérni a rendszermutatókat:", error);
       throw error;
     }
   },
