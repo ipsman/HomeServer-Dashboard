@@ -8,7 +8,7 @@ if (Platform.OS !== "web") {
 
 interface TaskManagerChartProps {
   speed: number;
-  cpuUtilization: number;
+  cpuUtilization: string;
   cpuData: { value: number }[];
 }
 
@@ -25,7 +25,7 @@ export const TaskManagerChart: React.FC<TaskManagerChartProps> = ({
             CPU
           </Text>
           <Text className="text-[10px] text-slate-400">
-            {speed} GHz — 60 másodperc
+            {speed} GHz — 60 seconds
           </Text>
         </View>
         <Text className="text-xl font-black text-emerald-400">

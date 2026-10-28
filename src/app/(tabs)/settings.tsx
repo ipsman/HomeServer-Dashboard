@@ -1,5 +1,7 @@
 import { useSettings } from "@/context/settingsController";
-import { useState } from "react";
+import { setServerIp } from "@/services/backendService";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useEffect, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -15,13 +17,26 @@ export default function SettingsScreen() {
   const { theme, setTheme } = useSettings();
   const isDarkMode = theme?.toLowerCase() === "dark";
 
-  // Szerver kapcsolódási adatok
-  const [serverUrl, setServerUrl] = useState("https://homeserver.local");
+  const [serverUrl, setServerUrl] = useState("192.168.0.115:8080");
   const [apiKey, setApiKey] = useState("••••••••••••••••");
   const [refreshInterval, setRefreshInterval] = useState("2");
 
-  const handleSaveSettings = () => {
-    Alert.alert("Success", "Server settings saved successfully!");
+  // Betöltjük a mentett URL-t Androidon/iOS-en indításkor
+  useEffect(() => {
+    AsyncStorage.getItem("serverUrl").then((saved) => {
+      if (saved) {
+        setServerUrl(saved);
+      }
+    });
+  }, []);
+
+  const handleSaveSettings = async () => {
+    try {
+      await setServerIp(serverUrl);
+      Alert.alert("Success", "Server settings saved successfully!");
+    } catch (error) {
+      Alert.alert("Error", "Failed to save settings.");
+    }
   };
 
   return (
@@ -60,11 +75,11 @@ export default function SettingsScreen() {
           </Text>
 
           <Text className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
-            Server URL / IP Address
+            Server IP & Port (pl. 192.168.0.115:8080)
           </Text>
           <TextInput
             className="border border-slate-200 dark:border-slate-700 p-3 rounded-xl mb-3 text-sm bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white"
-            placeholder="https://192.168.1.100:8080"
+            placeholder="192.168.0.115:8080"
             placeholderTextColor="#94a3b8"
             value={serverUrl}
             onChangeText={setServerUrl}

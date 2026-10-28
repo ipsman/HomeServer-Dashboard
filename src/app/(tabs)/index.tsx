@@ -1,5 +1,8 @@
 import { CircularProgressBar } from "@/components/ProgressBar";
 import { useSettings } from "@/context/settingsController";
+import { BackendService, ContainerInfo } from "@/services/backendService";
+import { useSystemStats } from "@/services/systemStats";
+import { useEffect, useState } from "react";
 import {
   ScrollView,
   StatusBar,
@@ -9,18 +12,48 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+interface ServiceItem {
+  name: string;
+  status: "online" | "offline";
+}
+
 export default function HomeScreen() {
   const { appColor, theme } = useSettings();
   const isDarkMode = theme?.toLowerCase() === "dark";
-
-  // Szolgáltatások adatai (később API-ból is jöhet)
-  const services = [
-    { name: "Jellyfin", status: "online" },
-    { name: "Samba", status: "online" },
-    { name: "Tailscale", status: "online" },
-    { name: "Qbittorrent", status: "online" },
+  const { stats, loading, error } = useSystemStats(1000);
+  
+  const [services, setServices] = useState<ServiceItem[]>([
+    { name: "Jellyfin", status: "offline" },
+    { name: "Samba", status: "offline" },
+    { name: "Tailscale", status: "offline" },
+    { name: "Qbittorrent", status: "offline" },
     { name: "Docker", status: "offline" },
-  ];
+  ]);
+
+  // Valós konténerek lekérése a BackendService-en keresztül
+  useEffect(() => {
+    const fetchContainers = async () => {
+      try {
+        const data = await BackendService.getContainers();
+        
+        // Átalakítjuk a backend válaszát a HomeScreen kis kártyáira
+        const formatted: ServiceItem[] = data.map((container: ContainerInfo) => ({
+          name: container.name.replace("/", ""),
+          status: container.state === "running" ? "online" : "offline",
+        }));
+
+        if (formatted.length > 0) {
+          setServices(formatted);
+        }
+      } catch (err) {
+        console.error("Hiba a HomeScreen konténer lekérésénél:", err);
+      }
+    };
+
+    fetchContainers();
+    const interval = setInterval(fetchContainers, 3000); // 3mp-enként frissül
+    return () => clearInterval(interval);
+  }, []);
 
   const onlineCount = services.filter((s) => s.status === "online").length;
 
@@ -39,11 +72,11 @@ export default function HomeScreen() {
           {/* 1. Kiemelt Terhelési Kártya */}
           <View className="bg-white dark:bg-slate-800 p-4 rounded-2xl mb-4 shadow-sm border border-slate-200 dark:border-slate-700 items-center">
             <CircularProgressBar
-              progress={60}
+              progress={stats?.totalSystemUsagePercent || 0}
               showPercentage={true}
               size={170}
               label="Total Usage"
-              color={appColor || (isDarkMode ? "#60a5fa" : "#2563eb")} // Háttérhez illeszkedő szín
+              color={appColor || (isDarkMode ? "#60a5fa" : "#2563eb")}
             />
 
             {/* Részletes mutatók */}
@@ -64,16 +97,16 @@ export default function HomeScreen() {
               </View>
               <View className="gap-1.5 items-end">
                 <Text className="text-xs font-bold text-slate-800 dark:text-white">
-                  60%
+                  {stats?.cpuUsagePercent?.toFixed(0)}%
                 </Text>
                 <Text className="text-xs font-bold text-slate-800 dark:text-white">
-                  50%
+                  {stats?.memoryUsagePercent?.toFixed(0)}%
                 </Text>
                 <Text className="text-xs font-bold text-slate-800 dark:text-white">
-                  10%
+                  {stats?.storage?.[0]?.usagePercent?.toFixed(0) ?? 0}%
                 </Text>
                 <Text className="text-xs font-bold text-slate-800 dark:text-white">
-                  40%
+                  {stats?.networkUsagePercent?.toFixed(0)}%
                 </Text>
               </View>
             </View>
@@ -85,16 +118,16 @@ export default function HomeScreen() {
               <View className="w-3 h-3 rounded-full bg-emerald-500" />
               <View>
                 <Text className="font-bold text-slate-800 dark:text-white">
-                  HomeServer-01
+                  {stats?.Hostname || "HomeServer"}
                 </Text>
                 <Text className="text-xs text-slate-500 dark:text-slate-400">
-                  Ubuntu 24.04 LTS
+                  {stats?.osName?.substring(0, 19) || "Linux / Windows"}
                 </Text>
               </View>
             </View>
             <View className="items-end">
               <Text className="text-xs font-bold text-emerald-500">ONLINE</Text>
-              <Text className="text-[10px] text-slate-400">Uptime: 12d 4h</Text>
+              <Text className="text-[10px] text-slate-400">Uptime: {stats?.uptimeFormatted}</Text>
             </View>
           </View>
 
@@ -133,7 +166,7 @@ export default function HomeScreen() {
                     Download
                   </Text>
                   <Text className="text-base font-bold text-slate-800 dark:text-white">
-                    12.4 MB/s
+                    {(((stats?.downloadSpeedKBps ?? 0) / 1024)).toFixed(2)} MB/s
                   </Text>
                 </View>
                 <View className="w-8 h-8 rounded-full bg-blue-500/10 items-center justify-center">
@@ -147,7 +180,7 @@ export default function HomeScreen() {
                     Upload
                   </Text>
                   <Text className="text-base font-bold text-slate-800 dark:text-white">
-                    1.8 MB/s
+                    {(((stats?.uploadSpeedKBps ?? 0) / 1024)).toFixed(2)} MB/s
                   </Text>
                 </View>
                 <View className="w-8 h-8 rounded-full bg-emerald-500/10 items-center justify-center">

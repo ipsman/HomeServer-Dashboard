@@ -27,13 +27,10 @@ export function useSystemStats(intervalMs = 3000) {
       }
     };
 
-    // Első azonnali lekérés
     fetchData();
 
-    // Időzítő az élő frissítéshez (Polling)
     const interval = setInterval(fetchData, intervalMs);
 
-    // Takarítás, ha elhagyjuk a komponenst
     return () => {
       isMounted = false;
       clearInterval(interval);

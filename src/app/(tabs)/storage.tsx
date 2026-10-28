@@ -1,5 +1,6 @@
 import { CircularProgressBar } from "@/components/ProgressBar";
 import { useSettings } from "@/context/settingsController";
+import { useSystemStats } from "@/services/systemStats";
 import { ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -16,39 +17,50 @@ export default function Storage() {
   const { appColor, theme } = useSettings();
   const isDarkMode = theme?.toLowerCase() === "dark";
 
-  // Mock adatok a szerver merevlemezeiről
-  const disks: DiskInfo[] = [
-    {
-      id: "1",
-      name: "System Drive",
-      mountPoint: "/",
-      totalGB: 512,
-      usedGB: 128,
-      type: "NVMe",
-    },
-    {
-      id: "2",
-      name: "Media Storage",
-      mountPoint: "/mnt/media",
-      totalGB: 2000,
-      usedGB: 1400,
-      type: "HDD",
-    },
-    {
-      id: "3",
-      name: "Backups & Logs",
-      mountPoint: "/mnt/backups",
-      totalGB: 1000,
-      usedGB: 350,
-      type: "SSD",
-    },
-  ];
+  const { stats, loading, error } = useSystemStats(1000);
+
+  // Dinamikusan feldolgozzuk a backendről jövő storage adatokat, ha vannak, különben fallback
+  const disks: DiskInfo[] = stats?.storage && stats.storage.length > 0
+    ? stats.storage.map((s, index) => ({
+        id: String(index + 1),
+        name: s.name || `Drive ${index + 1}`,
+        mountPoint: s.mount || "/",
+        totalGB: s.totalSpaceGB || 0,
+        usedGB: s.usedSpaceGB || 0,
+        type: (s.type as "SSD" | "HDD" | "NVMe") || "SSD",
+      }))
+    : [
+        {
+          id: "1",
+          name: "System Drive",
+          mountPoint: "/",
+          totalGB: 512,
+          usedGB: 128,
+          type: "NVMe",
+        },
+        {
+          id: "2",
+          name: "Media Storage",
+          mountPoint: "/mnt/media",
+          totalGB: 2000,
+          usedGB: 1400,
+          type: "HDD",
+        },
+        {
+          id: "3",
+          name: "Backups & Logs",
+          mountPoint: "/mnt/backups",
+          totalGB: 1000,
+          usedGB: 350,
+          type: "SSD",
+        },
+      ];
 
   // Összesített értékek kiszámítása
   const totalCapacity = disks.reduce((acc, d) => acc + d.totalGB, 0);
   const totalUsed = disks.reduce((acc, d) => acc + d.usedGB, 0);
   const totalFree = totalCapacity - totalUsed;
-  const overallProgress = Math.round((totalUsed / totalCapacity) * 100);
+  const overallProgress = totalCapacity > 0 ? Math.round((totalUsed / totalCapacity) * 100) : 0;
 
   return (
     <SafeAreaView className="flex-1 bg-slate-100 dark:bg-slate-900">
@@ -83,13 +95,13 @@ export default function Storage() {
 
             <View className="gap-1.5 items-end">
               <Text className="text-xs font-bold text-slate-800 dark:text-white">
-                {(totalCapacity / 1024).toFixed(2)} TB ({totalCapacity} GB)
+                {(totalCapacity / 1024).toFixed(2)} TB ({totalCapacity.toFixed(0)} GB)
               </Text>
               <Text className="text-xs font-bold text-blue-500">
-                {(totalUsed / 1024).toFixed(2)} TB ({totalUsed} GB)
+                {(totalUsed / 1024).toFixed(2)} TB ({totalUsed.toFixed(0)} GB)
               </Text>
               <Text className="text-xs font-bold text-emerald-500">
-                {(totalFree / 1024).toFixed(2)} TB ({totalFree} GB)
+                {(totalFree / 1024).toFixed(2)} TB ({totalFree.toFixed(0)} GB)
               </Text>
             </View>
           </View>
@@ -102,8 +114,8 @@ export default function Storage() {
 
         <View className="gap-3 pb-8">
           {disks.map((disk) => {
-            const diskProgress = Math.round((disk.usedGB / disk.totalGB) * 100);
-            const diskFreeGB = disk.totalGB - disk.usedGB;
+            const diskProgress = disk.totalGB > 0 ? Math.round((disk.usedGB / disk.totalGB) * 100) : 0;
+            const diskFreeGB = disk.totalGB - disk.usedGB; // <--- Javítva (- jel)
 
             return (
               <View
@@ -140,10 +152,10 @@ export default function Storage() {
                 {/* Lemez adatai */}
                 <View className="flex-row justify-between items-center mt-1">
                   <Text className="text-xs text-slate-500 dark:text-slate-400">
-                    {disk.usedGB} GB used of {disk.totalGB} GB
+                    {disk.usedGB.toFixed(0)} GB used of {disk.totalGB.toFixed(0)} GB
                   </Text>
                   <Text className="text-xs font-bold text-slate-800 dark:text-white">
-                    {diskFreeGB} GB free ({100 - diskProgress}%)
+                    {diskFreeGB.toFixed(0)} GB free ({100 - diskProgress}%) {/* <--- Javítva (- jel) */}
                   </Text>
                 </View>
               </View>

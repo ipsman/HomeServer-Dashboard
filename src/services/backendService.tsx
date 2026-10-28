@@ -1,27 +1,110 @@
-const API_BASE_URL = "http://172.24.25.190:8080/api"; // Android emulátorhoz (vagy a géped IP-címére)
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Definiáljuk, hogy milyen adatok jönnek a system végponttól (igazítsd a saját Backend DTO-d mezőihez!)
+let customServerIp = "192.168.0.115:8080"; // Alapértelmezett
+
+// Inicializáláskor betöltjük a mentett címet
+AsyncStorage.getItem("serverUrl").then((saved) => {
+  if (saved) {
+    customServerIp = saved.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  }
+});
+
+export const setServerIp = async (ip: string) => {
+  const cleanedIp = ip.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  customServerIp = cleanedIp;
+  await AsyncStorage.setItem("serverUrl", cleanedIp);
+};
+
+const getApiBaseUrl = () => {
+  return `http://${customServerIp}/api`;
+};
+
 export interface SystemStats {
-  cpuUsage?: number;
-  freeMemory?: number;
-  totalMemory?: number;
+  cpuUsagePercent?: number;
+  totalMemoryMB?: number;
+  usedMemoryMB?: number;
+  availableMemoryMB?: number;
+  memoryUsagePercent?: number;
+  osName?: string;
+  uptimeFormatted?: string;
+  uptimeDays?: number;
+  cpuTemp?: number;
+  cpuCores?: number;
+  storage?: Array<{
+    name: string;
+    mount: string;
+    type: string;
+    totalSpaceGB: number;
+    usableSpaceGB: number;
+    usedSpaceGB: number;
+    usagePercent: number;
+  }>;
+  downloadSpeedKBps?: number;
+  uploadSpeedKBps?: number;
+  Hostname?: string;
+  cpuCurrentFreqGHz?: number;
+  cpuMaxFreqGHz?: number;
+  networkUsagePercent?: number;
+  totalSystemUsagePercent?: number;
 
   [key: string]: any;
 }
 
+// 🐳 Új interfér az estructurált Docker konténerekhez
+export interface ContainerInfo {
+  id: string;
+  name: string;
+  image: string;
+  status: string;
+  state: "running" | "exited" | "restarting" | string;
+}
+
 export const BackendService = {
   // --- DOCKER ---
-  async getContainers(): Promise<string[]> {
-    const response = await fetch(`${API_BASE_URL}/docker/containers`);
+  async getContainers(): Promise<ContainerInfo[]> {
+    // Mivel a SystemController /api/system/containers alatt adja vissza
+    const response = await fetch(`${getApiBaseUrl()}/docker/containers`);
     if (!response.ok) throw new Error("Nem sikerült lekérni a konténereket");
     return await response.json();
+  },
+
+  async startContainer(id: string): Promise<void> {
+    const response = await fetch(`${getApiBaseUrl()}/docker/container/${id}/start`, {
+      method: "POST",
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Backend hiba start közben:", errorText);
+      throw new Error(`Nem sikerült elindítani a konténert (Státusz: ${response.status})`);
+    }
+  },
+
+  async stopContainer(id: string): Promise<void> {
+    const response = await fetch(`${getApiBaseUrl()}/docker/container/${id}/stop`, {
+      method: "POST",
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Backend hiba stop közben:", errorText);
+      throw new Error(`Nem sikerült leállítani a konténert (Státusz: ${response.status})`);
+    }
+  },
+
+  async restartContainer(id: string): Promise<void> {
+    const response = await fetch(`${getApiBaseUrl()}/docker/container/${id}/restart`, {
+      method: "POST",
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Backend hiba stop közben:", errorText);
+      throw new Error(`Nem sikerült leállítani a konténert (Státusz: ${response.status})`);
+    }
   },
 
   // --- SYSTEM STATS ---
   async getSystemStats(): Promise<SystemStats> {
     try {
-      // Itt add meg a backendeden lévő system endpoint pontos útvonalát (pl. /system/stats vagy /system)
-      const response = await fetch(`${API_BASE_URL}/system/stats`);
+      const response = await fetch(`${getApiBaseUrl()}/system/stats`);
       if (!response.ok) {
         throw new Error(`Hiba történt: ${response.status}`);
       }
