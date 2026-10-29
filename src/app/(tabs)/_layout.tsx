@@ -31,7 +31,7 @@ export default function TabLayout() {
         options={{
           title: "Overview",
           tabBarIcon: ({ color, size }) => (
-            <AntDesign name="dashboard" size={size} color={color} />
+            <AntDesign name="dashboard" size={size} color={color?.toString()} />
           ),
         }}
       />
@@ -40,7 +40,7 @@ export default function TabLayout() {
         options={{
           title: "Storage",
           tabBarIcon: ({ color, size }) => (
-            <AntDesign name="database" size={size} color={color} />
+            <AntDesign name="database" size={size} color={color?.toString()} />
           ),
         }}
       />
@@ -49,7 +49,7 @@ export default function TabLayout() {
         options={{
           title: "Components",
           tabBarIcon: ({ color, size }) => (
-            <Feather name="cpu" size={size} color={color} />
+            <Feather name="cpu" size={size} color={color?.toString()} />
           ),
         }}
       />
@@ -58,7 +58,7 @@ export default function TabLayout() {
         options={{
           title: "Services",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="apps" size={size} color={color} />
+            <Ionicons name="apps" size={size} color={color?.toString()} />
           ),
         }}
       />
@@ -67,7 +67,11 @@ export default function TabLayout() {
         options={{
           title: "Settings",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" size={size} color={color} />
+            <Ionicons
+              name="settings-outline"
+              size={size}
+              color={color?.toString()}
+            />
           ),
         }}
       />
