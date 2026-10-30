@@ -1,21 +1,37 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-let customServerIp = "192.168.0.115:8080"; // Alapértelmezett
+let customServerIp = "homeserver.tail002065.ts.net:8081"; // Alapértelmezett fallback
+let isInitialized = false;
 
-// Inicializáláskor betöltjük a mentett címet
-AsyncStorage.getItem("serverUrl").then((saved) => {
-  if (saved) {
-    customServerIp = saved.replace(/^https?:\/\//, "").replace(/\/$/, "");
+// Biztosítjuk, hogy a hívások előtt betöltődjön a mentett IP
+const ensureInitialized = async () => {
+  if (isInitialized) return;
+  try {
+    const saved = await AsyncStorage.getItem("serverUrl");
+    if (saved) {
+      customServerIp = saved.replace(/^https?:\/\//, "").replace(/\/$/, "");
+    }
+  } catch (e) {
+    console.error(
+      "Nem sikerült betölteni a szerver URL-t az AsyncStorage-ból:",
+
+      e,
+      alert("Hiba: " + JSON.stringify(e)),
+    );
+  } finally {
+    isInitialized = true; // Akkor is jelezzük, hogy lefutott, hahiba volt, hogy ne akassza meg az appot
   }
-});
+};
 
 export const setServerIp = async (ip: string) => {
   const cleanedIp = ip.replace(/^https?:\/\//, "").replace(/\/$/, "");
   customServerIp = cleanedIp;
+  isInitialized = true;
   await AsyncStorage.setItem("serverUrl", cleanedIp);
 };
 
-const getApiBaseUrl = () => {
+const getApiBaseUrl = async () => {
+  await ensureInitialized();
   return `http://${customServerIp}/api`;
 };
 
@@ -46,7 +62,6 @@ export interface SystemStats {
   cpuMaxFreqGHz?: number;
   networkUsagePercent?: number;
   totalSystemUsagePercent?: number;
-
   [key: string]: any;
 }
 
@@ -73,19 +88,17 @@ export interface ContainerInfo {
 export const BackendService = {
   // --- DOCKER ---
   async getContainers(): Promise<ContainerInfo[]> {
-    // Mivel a SystemController /api/system/containers alatt adja vissza
-    const response = await fetch(`${getApiBaseUrl()}/docker/containers`);
+    const baseUrl = await getApiBaseUrl();
+    const response = await fetch(`${baseUrl}/docker/containers`);
     if (!response.ok) throw new Error("Nem sikerült lekérni a konténereket");
     return await response.json();
   },
 
   async startContainer(id: string): Promise<void> {
-    const response = await fetch(
-      `${getApiBaseUrl()}/docker/container/${id}/start`,
-      {
-        method: "POST",
-      },
-    );
+    const baseUrl = await getApiBaseUrl();
+    const response = await fetch(`${baseUrl}/docker/container/${id}/start`, {
+      method: "POST",
+    });
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Backend hiba start közben:", errorText);
@@ -96,12 +109,10 @@ export const BackendService = {
   },
 
   async stopContainer(id: string): Promise<void> {
-    const response = await fetch(
-      `${getApiBaseUrl()}/docker/container/${id}/stop`,
-      {
-        method: "POST",
-      },
-    );
+    const baseUrl = await getApiBaseUrl();
+    const response = await fetch(`${baseUrl}/docker/container/${id}/stop`, {
+      method: "POST",
+    });
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Backend hiba stop közben:", errorText);
@@ -112,17 +123,15 @@ export const BackendService = {
   },
 
   async restartContainer(id: string): Promise<void> {
-    const response = await fetch(
-      `${getApiBaseUrl()}/docker/container/${id}/restart`,
-      {
-        method: "POST",
-      },
-    );
+    const baseUrl = await getApiBaseUrl();
+    const response = await fetch(`${baseUrl}/docker/container/${id}/restart`, {
+      method: "POST",
+    });
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Backend hiba stop közben:", errorText);
+      console.error("Backend hiba restart közben:", errorText);
       throw new Error(
-        `Nem sikerült leállítani a konténert (Státusz: ${response.status})`,
+        `Nem sikerült újraindítani a konténert (Státusz: ${response.status})`,
       );
     }
   },
@@ -130,20 +139,23 @@ export const BackendService = {
   // --- SYSTEM STATS ---
   async getSystemStats(): Promise<SystemStats> {
     try {
-      const response = await fetch(`${getApiBaseUrl()}/system/stats`);
+      const baseUrl = await getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/system/stats`);
       if (!response.ok) {
         throw new Error(`Hiba történt: ${response.status}`);
       }
       return await response.json();
     } catch (error) {
       console.error("Nem sikerült lekérni a rendszermutatókat:", error);
+      alert("Hiba: " + JSON.stringify(error));
       throw error;
     }
   },
 
   async getTorrents(): Promise<TorrentInfo[]> {
     try {
-      const response = await fetch(`${getApiBaseUrl()}/torrents`);
+      const baseUrl = await getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/torrents`);
       if (!response.ok) throw new Error("Nem sikerült lekérni a torrenteket");
       return await response.json();
     } catch (error) {
@@ -153,7 +165,8 @@ export const BackendService = {
   },
 
   async addTorrent(magnet: string): Promise<void> {
-    const response = await fetch(`${getApiBaseUrl()}/torrents/add`, {
+    const baseUrl = await getApiBaseUrl();
+    const response = await fetch(`${baseUrl}/torrents/add`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ magnet }),
@@ -162,14 +175,16 @@ export const BackendService = {
   },
 
   async pauseTorrent(hash: string): Promise<void> {
-    const response = await fetch(`${getApiBaseUrl()}/torrents/${hash}/pause`, {
+    const baseUrl = await getApiBaseUrl();
+    const response = await fetch(`${baseUrl}/torrents/${hash}/pause`, {
       method: "POST",
     });
     if (!response.ok) throw new Error("Nem sikerült megállítani a torrentet");
   },
 
   async resumeTorrent(hash: string): Promise<void> {
-    const response = await fetch(`${getApiBaseUrl()}/torrents/${hash}/resume`, {
+    const baseUrl = await getApiBaseUrl();
+    const response = await fetch(`${baseUrl}/torrents/${hash}/resume`, {
       method: "POST",
     });
     if (!response.ok) throw new Error("Nem sikerült elindítani a torrentet");
@@ -179,8 +194,9 @@ export const BackendService = {
     hash: string,
     deleteFiles: boolean = false,
   ): Promise<void> {
+    const baseUrl = await getApiBaseUrl();
     const response = await fetch(
-      `${getApiBaseUrl()}/torrents/${hash}?deleteFiles=${deleteFiles}`,
+      `${baseUrl}/torrents/${hash}?deleteFiles=${deleteFiles}`,
       {
         method: "DELETE",
       },
