@@ -140,14 +140,18 @@ export const BackendService = {
   async getSystemStats(): Promise<SystemStats> {
     try {
       const baseUrl = await getApiBaseUrl();
+      console.log("Meghívott URL:", `${baseUrl}/system/stats`);
+
       const response = await fetch(`${baseUrl}/system/stats`);
       if (!response.ok) {
-        throw new Error(`Hiba történt: ${response.status}`);
+        throw new Error(`Szerver hiba státusz: ${response.status}`);
       }
       return await response.json();
-    } catch (error) {
-      console.error("Nem sikerült lekérni a rendszermutatókat:", error);
-      alert("Hiba: " + JSON.stringify(error));
+    } catch (error: any) {
+      // Itt kinyerjük a valódi üzenetet!
+      const errorMsg = error?.message || String(error);
+      console.error("PONTOS HIBA:", errorMsg);
+      alert("Valódi hiba: " + errorMsg);
       throw error;
     }
   },
